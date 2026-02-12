@@ -1,11 +1,18 @@
 import streamlit as st
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-# Load precomputed document embeddings (Assuming embeddings.npy and documents.txt exist)
+import joblib
+from sklearn.feature_extraction.text import TfidfVectorizer
 
-embeddings = np.load("embeddings.npy")
+# Load precomputed document embeddings (Assuming embeddings.npy and documents.txt exist)
 with open("documents.txt", "r", encoding="utf-8") as f:
     documents = f.readlines()
+
+vectorizer = TfidfVectorizer(stop_words="english")
+matrix = vectorizer.fit_transform(documents)
+embeddings = matrix.astype(np.float32).toarray()
+joblib.dump(vectorizer, "vectorizer.pkl")
+
 
 def retrieve_top_k(query_embedding, embeddings, k=10):
     """Retrieve top-k most similar documents using cosine similarity."""
@@ -14,14 +21,15 @@ def retrieve_top_k(query_embedding, embeddings, k=10):
     return [(documents[i], similarities[i]) for i in top_k_indices]
 
 # Streamlit UI
-st.title("Information Retrieval using Document Embeddings")
+st.title("Reuters tfidf document search")
 
 # Input query
 query = st.text_input("Enter your query:")
 
 # Load or compute query embedding (Placeholder: Replace with actual embedding model)
 def get_query_embedding(query):
-    return np.random.rand(embeddings.shape[1])  # Replace with actual embedding function
+    query_vec = vectorizer.transform([query]).astype(np.float32).toarray()
+    return query_vec[0]
 
 if st.button("Search"):
     query_embedding = get_query_embedding(query)

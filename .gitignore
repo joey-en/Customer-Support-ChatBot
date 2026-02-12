@@ -3,6 +3,13 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+
+*.npy
+*.pkl
+documents.txt
+embeddings.npy
+vectorizer.pkl
+
 # C extensions
 *.so
 

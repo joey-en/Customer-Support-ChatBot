@@ -35,18 +35,9 @@ def write_documents(docs, path):
         for doc in docs:
             f.write(doc + "\n")
 
-def build_embeddings(docs, embed_path, vect_path):
-    vectorizer = TfidfVectorizer(stop_words="english")
-    matrix = vectorizer.fit_transform(docs)
-    embeddings = matrix.astype(np.float32).toarray()
-    np.save(embed_path, embeddings)
-    joblib.dump(vectorizer, vect_path)
 
 def main():
     docs = download_reuters()
     write_documents(docs, DOCS_PATH)
-    build_embeddings(docs, EMBED_PATH, VECT_PATH)
-    print(f"Wrote {DOCS_PATH}, {EMBED_PATH}, and {VECT_PATH}.")
 
-if __name__ == "__main__":
-    main()
+main()
