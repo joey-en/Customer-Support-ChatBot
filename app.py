@@ -9,8 +9,7 @@ with open("documents.txt", "r", encoding="utf-8") as f:
 
 def retrieve_top_k(query_embedding, embeddings, k=10):
     """Retrieve top-k most similar documents using cosine similarity."""
-    similarities = cosine_similarity(query_embedding.reshape(1, -1), embeddings)
-    [0]
+    similarities = cosine_similarity(query_embedding.reshape(1, -1), embeddings)[0]
     top_k_indices = similarities.argsort()[-k:][::-1]
     return [(documents[i], similarities[i]) for i in top_k_indices]
 
