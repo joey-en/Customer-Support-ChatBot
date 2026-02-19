@@ -1,44 +1,68 @@
 import streamlit as st
-import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
-import joblib
-from sklearn.feature_extraction.text import TfidfVectorizer
 
-# Load precomputed document embeddings (Assuming embeddings.npy and documents.txt exist)
-with open("documents.txt", "r", encoding="utf-8") as f:
-    documents = f.readlines()
+# Page config
+st.set_page_config(page_title="Kairos Chatbot", page_icon="🎥", layout="wide")
 
-vectorizer = TfidfVectorizer(stop_words="english")
-matrix = vectorizer.fit_transform(documents)
-embeddings = matrix.astype(np.float32).toarray()
-joblib.dump(vectorizer, "vectorizer.pkl")
+# Initialize session state for chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
+# CSS for chat bubbles
+st.markdown(
+    """
+<style>
+.assistant {
+    background-color: #28174f;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    margin: 5px 0px;
+    width: fit-content;
+    max-width: 70%;
+    align-self: flex-end;
+}
+.user {
+    background-color: #E0E0E0;
+    color: #0E2345;
+    padding: 10px 15px;
+    border-radius: 20px;
+    margin-left: auto;
+    width: fit-content;
+    max-width: 70%;
+    align-self: flex-end;
+}
+.chat-container {
+    display: flex;
+    flex-direction: column;
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
 
-def retrieve_top_k(query_embedding, embeddings, k=10):
-    """Retrieve top-k most similar documents using cosine similarity."""
-    similarities = cosine_similarity(query_embedding.reshape(1, -1), embeddings)[0]
-    top_k_indices = similarities.argsort()[-k:][::-1]
-    return [(documents[i], similarities[i]) for i in top_k_indices]
+st.title("🎥 Kairos Support Chatbot")
 
-# Streamlit UI
-st.title("Reuters tfidf document search")
+# Chat container
+chat_container = st.container()
 
-# Input query
-query = st.text_input("Enter your query:")
+# Input form
+with st.form(key="chat_form", clear_on_submit=True):
+    user_input = st.text_input("Type your message...")
+    submitted = st.form_submit_button("Send")
 
-# Load or compute query embedding (Placeholder: Replace with actual embedding model)
-def get_query_embedding(query):
-    query_vec = vectorizer.transform([query]).astype(np.float32).toarray()
-    return query_vec[0]
+    if submitted and user_input:
+        # Add user message
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        
+        # Placeholder assistant response (replace with backend call later)
+        assistant_response = f"Assistant reply to: '{user_input}'"
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
-if st.button("Search"):
-    query_embedding = get_query_embedding(query)
-    results = retrieve_top_k(query_embedding, embeddings)
-    # Display results
-    st.write("### Top 10 Relevant Documents:")
-    for doc, score in results:
-        st.write(f"- **{doc.strip()}** (Score: {score:.4f})")
+# Render chat messages
+with chat_container:
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f"<div class='user'>{msg['content']}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='assistant'>{msg['content']}</div>", unsafe_allow_html=True)
 
-# ===== RUN WITH =====  
-# streamlit run app.py
-# =====================
