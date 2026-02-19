@@ -1,3 +1,4 @@
+import html
 import json
 import os
 import re
@@ -70,9 +71,79 @@ def extract_json(text: str) -> dict:
         return {}
 
 
+def strip_html_divs(text: str) -> str:
+    if not isinstance(text, str):
+        return text
+    return re.sub(r"</?div[^>]*>", "", text)
+
+
+def render_assistant_html(content: str) -> str:
+    parts = []
+    pattern = re.compile(r"```(?:\w+)?\n(.*?)\n```", re.DOTALL)
+    last = 0
+    for match in pattern.finditer(content):
+        start, end = match.span()
+        text_chunk = content[last:start]
+        if text_chunk:
+            parts.append(html.escape(text_chunk).replace("\n", "<br>"))
+        code = html.escape(match.group(1))
+        parts.append(f"<pre><code>{code}</code></pre>")
+        last = end
+    tail = content[last:]
+    if tail:
+        parts.append(html.escape(tail).replace("\n", "<br>"))
+    return "".join(parts)
+
+
+def strip_markdown(text: str) -> str:
+    if not isinstance(text, str):
+        return text
+    text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    return text.strip()
+
+
+def summarize_issue(text: str) -> str:
+    prompt = (
+        "Summarize the technical issue below in 2-3 concise sentences. "
+        "Focus on symptoms, context, and any mentioned errors. "
+        "Do not add new information.\n\n"
+        f"Issue:\n{text}\n\nSummary:"
+    )
+    return strip_markdown(mistral_chat(prompt))
+
+
+def sanitize_issue_data(data: dict) -> dict:
+    fields = [
+        "issue_type",
+        "video_length",
+        "video_format",
+        "error_message",
+        "stage_of_failure",
+        "device_or_environment",
+        "urgency_level",
+    ]
+    sanitized = {}
+    for field in fields:
+        value = data.get(field, "Not specified") if isinstance(data, dict) else "Not specified"
+        if value is None:
+            value = "Not specified"
+        if isinstance(value, str):
+            value = value.strip() or "Not specified"
+        sanitized[field] = value
+    return sanitized
+
 # Initialize session state for chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if not st.session_state.messages:
+    st.session_state.messages.append(
+        {
+            "role": "assistant",
+            "content": "Hi there! How can I help you today? I'm your Kairos customer support assistant.",
+        }
+    )
 
 # CSS for chat bubbles
 st.markdown(
@@ -146,9 +217,23 @@ with st.form(key="chat_form", clear_on_submit=True):
         if intent == "Technical Issue":
             extraction_prompt = issue_extraction_tmpl.format(inquiry=inquiry)
             raw_json = mistral_chat(extraction_prompt)
-            issue_data = extract_json(raw_json)
-            details = json.dumps(issue_data, indent=2) if issue_data else raw_json
-            assistant_response = "I've logged the issue. Details:\n\n```json\n" + details + "\n```"
+            issue_data = sanitize_issue_data(extract_json(raw_json))
+
+            system_context = f"{system_archi}\n\nObserved issue details:\n{json.dumps(issue_data, indent=2)}"
+            system_prompt = system_question_tmpl.format(
+                inquiry=inquiry,
+                system_archi=system_context,
+            )
+            explanation = strip_markdown(mistral_chat(system_prompt))
+            summary = summarize_issue(inquiry)
+
+            details = json.dumps(issue_data, indent=2)
+            assistant_response = (
+                f"Summary: {summary}\n\n"
+                f"{explanation}\n\n"
+                "I've logged the issue. Details:\n\n```json\n"
+                f"{details}\n```"
+            )
         elif intent == "Feature Explanation":
             prompt = feature_question_tmpl.format(
                 inquiry=inquiry,
@@ -168,6 +253,7 @@ with st.form(key="chat_form", clear_on_submit=True):
             )
             assistant_response = mistral_chat(prompt)
 
+        assistant_response = strip_html_divs(assistant_response)
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
 # Render chat messages
@@ -176,4 +262,5 @@ with chat_container:
         if msg["role"] == "user":
             st.markdown(f"<div class='user'>{msg['content']}</div>", unsafe_allow_html=True)
         else:
-            st.markdown(f"<div class='assistant'>{msg['content']}</div>", unsafe_allow_html=True)
+            assistant_html = render_assistant_html(msg["content"])
+            st.markdown(f"<div class='assistant'>{assistant_html}</div>", unsafe_allow_html=True)
