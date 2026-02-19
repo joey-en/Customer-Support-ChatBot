@@ -1,0 +1,35 @@
+Feature Explanation: What Kairos Can and Can’t Do
+
+What Kairos Can Do
+* Analyze long‑form videos scene by scene
+* Automatically splits videos into meaningful scenes and processes each one.
+* Generate visual understanding
+* Captions key frames to describe what’s happening visually.
+* Detects objects to capture fine‑grained details.
+* Analyze audio content
+* Describes non‑speech sounds (e.g., ambience, effects).
+* Transcribes spoken dialogue in each scene.
+* Fuse multimodal evidence into rich scene descriptions
+* Combines visual captions, object detections, sound descriptions, and speech into a single, coherent scene report.
+* Produce narrative summaries and a final synopsis
+* Builds higher‑level summaries from scene reports and then a final synopsis for the whole video.
+* Enable retrieval‑style querying (RAG)
+* Builds embeddings so you can ask questions and retrieve the most relevant scenes.
+* Persist outputs for reuse
+* Saves scene data, summaries, and logs so you can resume or reuse results without reprocessing.
+
+What Kairos Can’t Do (Current Limitations)
+* It doesn’t “understand” beyond its models
+* It’s limited by the captioning, detection, ASR, and LLM accuracy; errors or hallucinations can appear.
+* It doesn’t guarantee perfect scene boundaries
+* Scene detection can miss subtle cuts or over‑segment fast‑moving content.
+* It doesn’t provide real‑time processing
+* Designed for offline processing of stored videos, not live streams.
+* It doesn’t fully resolve complex narrative reasoning
+* It summarizes, but it doesn’t deeply reason about plot structure, hidden motives, or nuanced themes.
+* It doesn’t output polished film‑grade annotations
+* Outputs are structured and useful, but not production‑ready cinematic annotations.
+* It doesn’t automatically handle all video types equally
+* Very static, very noisy, or visually abstract content may yield weaker results.
+* It doesn’t answer questions without prior processing
+* RAG requires that a video has already been processed and embedded.

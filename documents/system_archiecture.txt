@@ -1,0 +1,101 @@
+System Architecture Explanation
+
+1) High‑Level Overview
+Kairos is a long‑form video understanding platform that transforms raw video into a structured, searchable knowledge asset. It does this by:
+
+Segmenting video into scenes.
+Extracting visual and audio evidence per scene.
+Fusing that evidence into coherent scene descriptions.
+Building a narrative summary and synopsis.
+Generating embeddings for retrieval (RAG) and enabling query‑based clip discovery.
+2) Core Components (Conceptual)
+
+Ingestion & Cataloging
+
+Source videos live in Videos/.
+A catalog file (_all_videos.json) enables batch selection and filtering (by length or explicit selection).
+Scene Segmentation Layer
+
+Uses a shot/scene detection engine to split the video into semantically consistent scenes.
+Outputs scene boundaries and timecodes.
+Optionally saves physical scene clips into an output .clips directory for inspection or downstream use.
+Visual Analysis Pipeline
+
+Frame Sampling: Selects representative frames per scene at a target resolution.
+Captioning: Generates short descriptive captions per frame using a lightweight VLM.
+Object Detection: Runs object detection on sampled frames (and/or a separate FPS stream) to produce fine‑grained object lists and spatial hints.
+Artifacts are stored under per‑video output directories (e.g., .frames, .fps, .yolo).
+Audio Analysis Pipeline
+
+Natural Sound Description: Produces semantic descriptions of non‑speech audio events.
+Speech Transcription: Produces ASR transcripts with optional VAD for clarity.
+These features align to scene time boundaries to preserve temporal context.
+Scene Evidence Fusion
+
+For each scene, all evidence streams are merged:
+Visual captions
+Object detections
+Sound descriptions
+Speech transcripts
+An LLM produces a coherent, human‑readable scene description that is more informative than any single modality.
+Narrative Construction
+
+Scene descriptions are chunked into larger blocks.
+An LLM produces multi‑scene narrative summaries, then a final synopsis.
+This provides hierarchical abstraction: scene‑level → narrative‑level → synopsis‑level.
+Retrieval (RAG) Layer
+
+Scene‑level information is embedded into a vector index.
+A conversational interface can retrieve the most relevant scenes for a user query and surface them as clip references or summaries.
+Checkpointing & Logging
+
+Each video run persists intermediate state to a checkpoint file to allow restarts without redoing costly steps.
+Logs are stored in logs/ and log_reports/ for performance tracking and reproducibility.
+3) Data Flow (End‑to‑End)
+
+Video Selection
+
+User selects one or more videos from the catalog.
+Scene Detection
+
+The video is segmented into ordered scenes; timecodes are captured.
+Per‑Scene Feature Extraction
+
+Visual frames are sampled and analyzed.
+Audio is analyzed for both speech and ambient events.
+Scene Description Generation
+
+Multimodal evidence is fused into a single scene summary.
+Narrative & Synopsis
+
+The system composes a higher‑level narrative summary and final synopsis.
+Embedding Creation
+
+Scene‑level data is embedded for retrieval.
+Querying retrieves the most relevant scenes and their evidence.
+4) Storage & Artifacts
+For each processed video, Kairos writes:
+
+Scene metadata: boundaries, timecodes, derived features.
+Intermediate outputs: frames, clips, detection results.
+Scene descriptions and narrative summaries.
+RAG embeddings for search and retrieval.
+These outputs live under _processed/ with per‑video subdirectories.
+
+5) Resilience & Reproducibility
+
+Checkpointing prevents reprocessing already‑completed stages.
+Step‑level logging ensures each stage’s runtime and outputs are tracked.
+The architecture supports incremental re‑runs (e.g., only re‑summarize scenes).
+6) Scalability Considerations
+
+Batch processing is supported through a catalog‑driven selection mechanism.
+Scene‑level parallelism is possible conceptually because scenes are independent once segmented.
+Configurable quality‑speed tradeoffs (e.g., number of frames per scene, detection FPS) allow tuning for large video sets.
+7) Extensibility
+The architecture is modular:
+
+Visual analysis can swap or add new models.
+Audio analysis can add speaker diarization or emotion.
+Fusion prompts can be updated for different reporting styles.
+Retrieval can incorporate new metadata or ranking heuristics.
